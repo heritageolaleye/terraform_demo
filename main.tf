@@ -1,65 +1,49 @@
-provider "aws" {
-  region = var.region
-}
+terraform {
+  required_version = ">= 1.5.0"
 
-# Get list of availability zones
-data "aws_availability_zones" "available" {
-  state = "available"
-}
-
-# Create VPC
-resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_support   = var.enable_dns_support
-  enable_dns_hostnames = var.enable_dns_hostnames
-
-  tags = {
-    Name        = "Custom-VPC"
-    Environment = "production"
-    Terraform   = "true"
-    Project     = "PBL"
+  backend "local" {
+    path = "terraform.tfstate"
   }
 }
 
-# Create Internet Gateway
-resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "Custom-IGW"
-  }
+provider "google" {
+  project = "project-aeeb97f2-604e-4484-aa7"
+  region  = "us-central1"
 }
 
-# Create Public Route Table
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
-  }
-
-  tags = {
-    Name = "Public-Route-Table"
-  }
+# VPC Network
+resource "google_compute_network" "main" {
+  name                    = "main-network"
+  auto_create_subnetworks = false
 }
 
-# Dynamically create public subnets
-resource "aws_subnet" "public" {
-  count                   = var.preferred_number_of_public_subnets == null ? length(data.aws_availability_zones.available.names) : var.preferred_number_of_public_subnets
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = cidrsubnet(var.vpc_cidr, 4, count.index)
-  map_public_ip_on_launch = true
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
+# Subnet
+resource "google_compute_subnetwork" "public" {
+  count = length(var.subnet_name)
 
-  tags = {
-    Name = "Public-Subnet-${count.index + 1}"
+  name          = "main-subnet"
+  ip_cidr_range = "10.0.0.0/16"
+  region        = "us-central1"
+  network       = google_compute_network.main.id
+}
+
+/* VM Instance
+resource "google_compute_instance" "example" {
+  name         = "todo"
+  machine_type = "e2-micro"
+  zone         = "us-central1-a"
+
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-2404-lts"
+    }
+  }
+
+  network_interface {
+    network    = google_compute_network.main.id
+    subnetwork = google_compute_subnetwork.main.id
+    access_config {}  # Gives public IP
   }
 }
-
-# Associate Public Subnets with the Public Route Table
-resource "aws_route_table_association" "public" {
-  count          = length(aws_subnet.public)
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
-}
+*/

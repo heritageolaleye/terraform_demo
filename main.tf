@@ -7,24 +7,24 @@ terraform {
 }
 
 provider "google" {
-  project = "project-aeeb97f2-604e-4484-aa7"
-  region  = "us-central1"
+  project = var.project_id
+  region  = var.region
 }
 
 
 # VPC Network
 resource "google_compute_network" "main" {
-  name                    = "main-network"
+  name                    = var.network_name
   auto_create_subnetworks = false
 }
 
 # Subnet
 resource "google_compute_subnetwork" "public" {
-  count = length(var.subnet_name)
+  count = var.preferred_number_of_public_subnets
 
-  name          = "main-subnet"
-  ip_cidr_range = "10.0.0.0/16"
-  region        = "us-central1"
+  name          = "main-subnet-${count.index}"
+  ip_cidr_range = "10.${count.index}.0.0/16"
+  region        = "var.region"
   network       = google_compute_network.main.id
 }
 

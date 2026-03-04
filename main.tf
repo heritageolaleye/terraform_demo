@@ -24,7 +24,7 @@ resource "google_compute_subnetwork" "public" {
 
   name          = "main-subnet-${count.index}"
   ip_cidr_range = "10.${count.index}.0.0/16"
-  region        = "var.region"
+  region        = var.region
   network       = google_compute_network.main.id
 }
 
